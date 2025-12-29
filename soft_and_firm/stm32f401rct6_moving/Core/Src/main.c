@@ -18,13 +18,13 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "spi.h"
+#include "i2c.h"
 #include "tim.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>  // Для отладки, если будете использовать UART
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,13 +45,24 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+// Объявляем глобальные переменные здесь
+int8_t l_val = 0;
+int8_t r_val = 0;
+uint8_t tx_byte = 0x67;
+uint8_t rx_buffer[2];
+volatile uint8_t rx_index = 0;
+volatile uint8_t i2c_busy = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+// Прототипы callback-функций
+void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t dir, uint16_t addr);
+void HAL_I2C_SlaveRxCallback(I2C_HandleTypeDef *hi2c);
+void HAL_I2C_SlaveTxCpltCallback(I2C_HandleTypeDef *hi2c);
+void HAL_I2C_ListenCpltCallback(I2C_HandleTypeDef *hi2c);
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -88,18 +99,68 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_SPI1_Init();
   MX_TIM2_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-
+  // Даем время на инициализацию
+  HAL_Delay(100);
+  
+  // Включаем I2C в режиме slave
+  HAL_I2C_EnableListen_IT(&hi2c1);
+  
+  // Запускаем ШИМ
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+  
+  // Инициализация пинов моторов
+  HAL_GPIO_WritePin(ML2_GPIO_Port, ML2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(MR2_GPIO_Port, MR2_Pin, GPIO_PIN_RESET);
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_13);
-    HAL_Delay(500);
+    // Управление левым мотором
+    if(l_val >= 0) 
+    {
+      HAL_GPIO_WritePin(ML1_GPIO_Port, ML1_Pin, GPIO_PIN_RESET);  // Направление вперед
+      TIM2->CCR1 = l_val;  // Скорость
+    }
+    else  // l_val < 0
+    {
+      HAL_GPIO_WritePin(ML1_GPIO_Port, ML1_Pin, GPIO_PIN_SET);    // Направление назад
+      TIM2->CCR1 = -l_val;  // Абсолютное значение скорости
+    }
+    
+    // Управление правым мотором
+    if(r_val >= 0) 
+    {
+      HAL_GPIO_WritePin(MR1_GPIO_Port, MR1_Pin, GPIO_PIN_RESET);  // Направление вперед
+      TIM2->CCR2 = r_val;  // Скорость
+    }
+    else  // r_val < 0
+    {
+      HAL_GPIO_WritePin(MR1_GPIO_Port, MR1_Pin, GPIO_PIN_SET);    // Направление назад
+      TIM2->CCR2 = -r_val;  // Абсолютное значение скорости
+    }
+    
+    // Защита от зависания I2C
+    static uint32_t last_activity = 0;
+    if(i2c_busy && (HAL_GetTick() - last_activity > 1000))  // Таймаут 1 секунда
+    {
+      // Перезапускаем I2C
+      HAL_I2C_DeInit(&hi2c1);
+      HAL_I2C_Init(&hi2c1);
+      HAL_I2C_EnableListen_IT(&hi2c1);
+      i2c_busy = 0;
+    }
+    
+    last_activity = HAL_GetTick();
+    
+    HAL_Delay(10);  // Небольшая задержка
+    
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
