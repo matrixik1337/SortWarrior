@@ -69,7 +69,8 @@ void Error_Handler(void);
 #define MR2_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
-
+extern int8_t left_motor_speed;
+extern int8_t right_motor_speed;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
@@ -77,3 +78,4 @@ void Error_Handler(void);
 #endif
 
 #endif /* __MAIN_H */
+

@@ -21,16 +21,8 @@
 #include "i2c.h"
 
 /* USER CODE BEGIN 0 */
-// Объявляем extern для доступа к переменным из main.c
-extern int8_t l_val;
-extern int8_t r_val;
-extern uint8_t tx_byte;
-extern uint8_t rx_buffer[2];
-extern volatile uint8_t rx_index;
-extern volatile uint8_t i2c_busy;
 
-// Флаг для отладки
-volatile uint8_t i2c_event_flag = 0;
+
 /* USER CODE END 0 */
 
 I2C_HandleTypeDef hi2c1;
@@ -53,7 +45,7 @@ void MX_I2C1_Init(void)
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
   hi2c1.Init.OwnAddress2 = 0;
-  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_ENABLE;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
   hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_ENABLE;
   if (HAL_I2C_Init(&hi2c1) != HAL_OK)
   {
@@ -131,133 +123,30 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
 /* USER CODE BEGIN 1 */
 
-// ========== I2C CALLBACKS ==========
+void HAL_I2C_ListenCpltCallback (I2C_HandleTypeDef *hi2c)
+{
+	HAL_I2C_EnableListen_IT(hi2c);
+}
 
-/**
-  * @brief  Обработчик при совпадении адреса
-  */
 void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, uint16_t AddrMatchCode)
 {
-    if(hi2c->Instance == I2C1)
-    {
-        i2c_busy = 1;
-        i2c_event_flag = 1;
-        
-        if(TransferDirection == I2C_DIRECTION_TRANSMIT)
-        {
-            // Master хочет читать (команда i2cget)
-            // Отправляем один байт
-            HAL_I2C_Slave_Transmit_IT(hi2c, &tx_byte, 1);
-        }
-        else
-        {
-            // Master хочет писать (команда i2cset)
-            rx_index = 0;  // Сбрасываем индекс для нового пакета
-        }
-    }
+	if(TransferDirection == I2C_DIRECTION_TRANSMIT)  // if the master wants to transmit the data
+	{
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+    HAL_I2C_Slave_Seq_Receive_IT(hi2c, i2c_rx_buffer, BUFFER_SIZE, I2C_FIRST_AND_LAST_FRAME);
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+	}
 }
 
-/**
-  * @brief  Обработчик при получении каждого байта
-  */
-void HAL_I2C_SlaveRxCallback(I2C_HandleTypeDef *hi2c)
-{
-    if(hi2c->Instance == I2C1)
-    {
-        // Читаем байт из регистра данных
-        uint8_t data = (uint8_t)hi2c->Instance->DR;
-        
-        if(rx_index < 2)  // Ожидаем максимум 2 байта
-        {
-            rx_buffer[rx_index] = data;
-            rx_index++;
-            
-            // Если получили 2 байта, обрабатываем сразу
-            if(rx_index == 2)
-            {
-                if(rx_buffer[0] == 1)
-                {
-                    l_val = (int8_t)(rx_buffer[1] - 100);
-                }
-                else if(rx_buffer[0] == 2)
-                {
-                    r_val = (int8_t)(rx_buffer[1] - 100);
-                }
-            }
-        }
-    }
-}
-
-/**
-  * @brief  Обработчик при завершении приёма
-  */
 void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
-    if(hi2c->Instance == I2C1)
-    {
-        i2c_busy = 0;
-        // Дополнительная обработка если нужно
-    }
+  left_motor_speed=i2c_rx_buffer[0]-100;
+  right_motor_speed=i2c_rx_buffer[1]-100;
 }
 
-/**
-  * @brief  Обработчик при завершении передачи
-  */
-void HAL_I2C_SlaveTxCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-    if(hi2c->Instance == I2C1)
-    {
-        i2c_busy = 0;
-    }
-}
-
-/**
-  * @brief  Обработчик при завершении прослушивания (после STOP)
-  */
-void HAL_I2C_ListenCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-    if(hi2c->Instance == I2C1)
-    {
-        // Очищаем флаги
-        __HAL_I2C_CLEAR_FLAG(hi2c, I2C_FLAG_AF);
-        __HAL_I2C_CLEAR_FLAG(hi2c, I2C_FLAG_BERR);
-        
-        i2c_busy = 0;
-        
-        // ВАЖНО: Перезапускаем прослушивание
-        HAL_I2C_EnableListen_IT(hi2c);
-    }
-}
-
-/**
-  * @brief  Обработчик ошибок I2C
-  */
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
 {
-    if(hi2c->Instance == I2C1)
-    {
-        uint32_t error = HAL_I2C_GetError(hi2c);
-        
-        // Очищаем флаги ошибок
-        if(error & HAL_I2C_ERROR_AF)
-        {
-            __HAL_I2C_CLEAR_FLAG(hi2c, I2C_FLAG_AF);
-        }
-        if(error & HAL_I2C_ERROR_BERR)
-        {
-            __HAL_I2C_CLEAR_FLAG(hi2c, I2C_FLAG_BERR);
-        }
-        if(error & HAL_I2C_ERROR_ARLO)
-        {
-            __HAL_I2C_CLEAR_FLAG(hi2c, I2C_FLAG_ARLO);
-        }
-        
-        // Сбрасываем состояние
-        hi2c->State = HAL_I2C_STATE_READY;
-        
-        // Перезапускаем прослушивание
-        HAL_I2C_EnableListen_IT(hi2c);
-    }
+	HAL_I2C_EnableListen_IT(hi2c);
 }
 
 /* USER CODE END 1 */

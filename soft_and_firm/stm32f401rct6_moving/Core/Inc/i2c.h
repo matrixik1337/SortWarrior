@@ -36,7 +36,10 @@ extern I2C_HandleTypeDef hi2c1;
 
 /* USER CODE BEGIN Private defines */
 
-#define I2C_SLAVE_ADDRESS 0x10  // 32 в десятичной
+#define BUFFER_SIZE 2
+
+static uint8_t i2c_rx_buffer[BUFFER_SIZE];
+static uint8_t tx_data[1] = {0x67};
 
 /* USER CODE END Private defines */
 
