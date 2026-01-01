@@ -1,0 +1,26 @@
+<annotation>
+	<folder>images_for_training</folder>
+	<filename>img39.png</filename>
+	<path>/home/matrix/WORK/PROJECTS/SortWarrior/soft_and_firm/rpi_main/lib/vision/model_training/images_for_training/img39.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>1462</width>
+		<height>902</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>blue_puck</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>168</xmin>
+			<ymin>154</ymin>
+			<xmax>233</xmax>
+			<ymax>211</ymax>
+		</bndbox>
+	</object>
+</annotation>
