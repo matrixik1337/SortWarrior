@@ -66,7 +66,6 @@ def split_dataset(name, image_dir, label_dir, train_ratio=0.7, val_ratio=0.2, te
 
 
 model_name = input("Enter model name: ")
-img_dir = input("Enter images path: ")
 
 class_names = []
 num_of_classes = int(input("Enter num of classes: "))
@@ -78,6 +77,8 @@ labels_dir = "labels"
 for xml_file in os.listdir(xml_dir):
     if xml_file.endswith('.xml'):
         convert_voc_to_yolo(os.path.join(xml_dir, xml_file), labels_dir, class_names)
+
+img_dir = input("Enter images path: ")
 
 print("Splitting images...")
 split_dataset(model_name,img_dir,labels_dir)
@@ -101,19 +102,24 @@ with open(f"{model_name}_arch.yaml","w") as file:
     file.close()
 
 print("Initialize model...")
-
 model = YOLO("../../yolov8n.pt")
 
-print("TRAINING...")
-results = model.train(
-   data=f'{model_name}_arch.yaml',
-   imgsz=640,
-   epochs=50,
-   batch=16,
-   name=model_name,
+img_size = int(input("Enter image size: "))
+epochs_num = int(input("Enter epochs num: "))
+batch_num = int(input("Enter batch num: "))
 
-)
+if(input("Start train? (y/n): ")=="y"):
 
+    print("TRAINING...")
+    results = model.train(
+    data=f'{model_name}_arch.yaml',
+    imgsz=img_size,
+    epochs=epochs_num,
+    batch=batch_num,
+    name=model_name
+    )
+    print("DONE!")
 
-
-print("DONE!")
+else:
+    print("Exiting...")
+    exit()
