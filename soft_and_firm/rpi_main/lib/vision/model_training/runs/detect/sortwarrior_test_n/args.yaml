@@ -2,10 +2,10 @@ task: detect
 mode: train
 model: yolov8n.yaml
 data: datasets/sortwarrior_test/sortwarrior_test_data.yaml
-epochs: 100
+epochs: 300
 time: null
 patience: 30
-batch: 16
+batch: 128
 imgsz: 320
 save: true
 save_period: -1
@@ -13,7 +13,7 @@ cache: false
 device: cpu
 workers: 2
 project: null
-name: sortwarrior_test_n
+name: sortwarrior_test_n2
 exist_ok: false
 pretrained: false
 optimizer: auto
@@ -103,4 +103,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: /home/matrix/WORK/PROJECTS/SortWarrior/soft_and_firm/rpi_main/lib/vision/model_training/runs/detect/sortwarrior_test_n
+save_dir: /home/matrix/WORK/PROJECTS/SortWarrior/soft_and_firm/rpi_main/lib/vision/model_training/runs/detect/sortwarrior_test_n2
