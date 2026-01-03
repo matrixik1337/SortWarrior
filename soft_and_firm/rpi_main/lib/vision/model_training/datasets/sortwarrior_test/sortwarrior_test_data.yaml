@@ -1,0 +1,12 @@
+path: /home/matrix/WORK/PROJECTS/SortWarrior/soft_and_firm/rpi_main/lib/vision/model_training/datasets/sortwarrior_test
+train: images/train
+val: images/val
+test: images/test
+
+nc: 4
+
+names:
+  0: 'blue_puck'
+  1: 'red_puck'
+  2: 'blue_base'
+  3: 'red_base'

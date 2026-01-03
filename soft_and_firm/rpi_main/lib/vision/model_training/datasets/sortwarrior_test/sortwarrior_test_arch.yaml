@@ -1,9 +1,0 @@
-
-path: sortwarrior_test/
-train: 'images/train'
-val: 'images/val'
-names:
-  0: 'blue_puck'
-  1: 'red_puck'
-  2: 'blue_base'
-  3: 'red_base'
