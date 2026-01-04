@@ -179,78 +179,29 @@ names:
 
 def train_yolo_model(yaml_file, class_list, model_name, model_size='n'):
     params = {
-        'n': {'imgsz': 320, 'epochs': 500, 'batch': 32},
-        's': {'imgsz': 416, 'epochs': 500, 'batch': 16},
-        'm': {'imgsz': 512, 'epochs': 500, 'batch': 8},
-        'l': {'imgsz': 640, 'epochs': 500, 'batch': 4},
+        'n': {'imgsz': 320, 'epochs': 2000, 'batch': 16},
+        's': {'imgsz': 416, 'epochs': 2000, 'batch': 8},
+        'm': {'imgsz': 512, 'epochs': 2000, 'batch': 4},
+        'l': {'imgsz': 640, 'epochs': 2000, 'batch': 2},
     }
-    
-    if model_size not in params:
-        model_size = 'n'
     
     p = params[model_size]
     
+    device_to_use = input("Enter name of device to use (NVIDIA GPU: \"cuda\"; CPU: \"cpu\"): ")
+    if input("Use pretrained model? (y/n): ") == "y":
+        use_pretrained = True
+    else :
+        use_pretrained = False
+        
     try:
-        with open("arch.yaml","w") as f:
-            f.write(f"""
-            # Ultralytics YOLO11 object detection model with P3/8 - P5/32 outputs
-            # Model docs: https://docs.ultralytics.com/models/yolo11
-            # Task docs: https://docs.ultralytics.com/tasks/detect
-
-            # Parameters
-            nc: {len(class_list)} # number of classes
-            scales: # model compound scaling constants, i.e. 'model=yolo11n.yaml' will call yolo11.yaml with scale 'n'
-            # [depth, width, max_channels]
-            n: [0.50, 0.25, 1024] # summary: 181 layers, 2624080 parameters, 2624064 gradients, 6.6 GFLOPs
-            s: [0.50, 0.50, 1024] # summary: 181 layers, 9458752 parameters, 9458736 gradients, 21.7 GFLOPs
-            m: [0.50, 1.00, 512] # summary: 231 layers, 20114688 parameters, 20114672 gradients, 68.5 GFLOPs
-            l: [1.00, 1.00, 512] # summary: 357 layers, 25372160 parameters, 25372144 gradients, 87.6 GFLOPs
-            x: [1.00, 1.50, 512] # summary: 357 layers, 56966176 parameters, 56966160 gradients, 196.0 GFLOPs
-
-            # YOLO11n backbone
-            backbone:
-            # [from, repeats, module, args]
-            - [-1, 1, Conv, [64, 3, 2]] # 0-P1/2
-            - [-1, 1, Conv, [128, 3, 2]] # 1-P2/4
-            - [-1, 2, C3k2, [256, False, 0.25]]
-            - [-1, 1, Conv, [256, 3, 2]] # 3-P3/8
-            - [-1, 2, C3k2, [512, False, 0.25]]
-            - [-1, 1, Conv, [512, 3, 2]] # 5-P4/16
-            - [-1, 2, C3k2, [512, True]]
-            - [-1, 1, Conv, [1024, 3, 2]] # 7-P5/32
-            - [-1, 2, C3k2, [1024, True]]
-            - [-1, 1, SPPF, [1024, 5]] # 9
-            - [-1, 2, C2PSA, [1024]] # 10
-
-            # YOLO11n head
-            head:
-            - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
-            - [[-1, 6], 1, Concat, [1]] # cat backbone P4
-            - [-1, 2, C3k2, [512, False]] # 13
-
-            - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
-            - [[-1, 4], 1, Concat, [1]] # cat backbone P3
-            - [-1, 2, C3k2, [256, False]] # 16 (P3/8-small)
-
-            - [-1, 1, Conv, [256, 3, 2]]
-            - [[-1, 13], 1, Concat, [1]] # cat head P4
-            - [-1, 2, C3k2, [512, False]] # 19 (P4/16-medium)
-
-            - [-1, 1, Conv, [512, 3, 2]]
-            - [[-1, 10], 1, Concat, [1]] # cat head P5
-            - [-1, 2, C3k2, [1024, True]] # 22 (P5/32-large)
-
-            - [[16, 19, 22], 1, Detect, [nc]] # Detect(P3, P4, P5)
-            """)
-
-        model = YOLO("arch.yaml")
+        model = YOLO("yolo11n.pt")
         results = model.train(
             data=yaml_file,
             imgsz=p['imgsz'],
             epochs=p['epochs'],
             batch=p['batch'],
-            name=f"{model_name}_{model_size}",
-            pretrained=False,
+            name=model_name,
+            pretrained=use_pretrained,
             lr0=0.01,
             lrf=0.1,
             momentum=0.937,
@@ -260,13 +211,13 @@ def train_yolo_model(yaml_file, class_list, model_name, model_size='n'):
             optimizer='AdamW',
             seed=42,
             deterministic=True,
-            workers=8
+            workers=8,
+            device=device_to_use
         )
         
         weights_path = f"runs/detect/{model_name}_{model_size}/weights/best.pt"
-        if os.path.exists(weights_path):
-            trained_model = YOLO(weights_path)
-            trained_model.export(format='onnx', simplify=True, opset=12)
+        trained_model = YOLO(weights_path)
+        trained_model.export(format='onnx', simplify=True, opset=12)
         
         return results
     except Exception as e:
@@ -274,14 +225,14 @@ def train_yolo_model(yaml_file, class_list, model_name, model_size='n'):
         return None
 
 def main():
-    xml_dir = input("XML directory: ").strip()
-    img_dir = input("Images directory: ").strip()
+    xml_dir = input("Enter XML annotations directory: ").strip()
+    img_dir = input("Enter images directory: ").strip()
     
     if not os.path.exists(xml_dir) or not os.path.exists(img_dir):
         return
     
-    model_name = input("Model name: ").strip()
-    model_size = input("Model size [n]: ").strip().lower()
+    model_name = input("Enter model name: ").strip()
+    model_size = input("Model size [n]: ").strip()
     
     if model_size not in ['n', 's', 'm', 'l']:
         model_size = 'n'
@@ -306,6 +257,9 @@ def main():
     
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
+        
+    if os.path.exists(dataset_path):
+        shutil.rmtree(dataset_path)
 
 if __name__ == "__main__":
     main()
