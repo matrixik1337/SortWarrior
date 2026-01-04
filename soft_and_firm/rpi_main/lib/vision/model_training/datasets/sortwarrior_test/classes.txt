@@ -1,5 +1,0 @@
-# Class mapping (ID: Name)
-0: blue_puck
-1: red_puck
-2: blue_base
-3: red_base
