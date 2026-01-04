@@ -34,5 +34,5 @@ for result in results:
 
 
 cv2.namedWindow("result",cv2.WINDOW_NORMAL)
-while cv2.waitKey(1)!=ord("q"):
+while cv2.waitKey(20)!=ord("q"):
     cv2.imshow("result",result_frame)
