@@ -1,6 +1,30 @@
-from ..camera import Camera
 from ultralytics import YOLO
 import cv2
+from picamera2 import Picamera2 
+import os
+
+class Camera:
+    def __init__(self, mode=3):
+        os.environ["LIBCAMERA_LOG_LEVELS"] = "4"
+        self.cam = Picamera2()
+        available_modes = self.cam.sensor_modes[mode]
+        config = self.cam.create_preview_configuration(
+            main = {
+                'format': 'RGB888'
+            },
+            sensor={
+                'output_size': available_modes['size'],
+                'bit_depth': available_modes['bit_depth']
+            }
+        )
+        self.cam.configure(config)
+        self.cam.start()
+    
+    def stop(self):
+        self.cam.stop()
+
+    def get_array(self):
+        return self.cam.capture_array()
 
 path_to_model = input("Enter path to model: ")
 
@@ -13,7 +37,6 @@ cv2.namedWindow("result",cv2.WINDOW_NORMAL)
 
 while cv2.waitKey(1)!=ord("q"):
     frame = cam.get_array()
-
     detections = model.track()
     result_frame = frame.copy()
     results = model.track(frame, stream=True)
