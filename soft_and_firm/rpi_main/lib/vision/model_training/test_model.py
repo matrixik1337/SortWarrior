@@ -16,7 +16,7 @@ results = model.track(frame, stream=True)
 for result in results:
     class_names = result.names
     for box in result.boxes:
-        if box.conf[0] > 0.4:
+        if box.conf[0] > 0:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
 
             cls = int(box.cls[0])

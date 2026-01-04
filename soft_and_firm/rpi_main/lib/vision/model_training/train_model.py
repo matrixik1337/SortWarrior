@@ -179,10 +179,10 @@ names:
 
 def train_yolo_model(yaml_file, class_list, model_name, model_size='n'):
     params = {
-        'n': {'imgsz': 320, 'epochs': 2000, 'batch': 16},
-        's': {'imgsz': 416, 'epochs': 2000, 'batch': 8},
-        'm': {'imgsz': 512, 'epochs': 2000, 'batch': 4},
-        'l': {'imgsz': 640, 'epochs': 2000, 'batch': 2},
+        'n': {'imgsz': 320, 'epochs': 2000, 'batch': 8},
+        's': {'imgsz': 416, 'epochs': 2000, 'batch': 4},
+        'm': {'imgsz': 512, 'epochs': 2000, 'batch': 2},
+        'l': {'imgsz': 640, 'epochs': 2000, 'batch': 1},
     }
     
     p = params[model_size]
@@ -207,17 +207,13 @@ def train_yolo_model(yaml_file, class_list, model_name, model_size='n'):
             momentum=0.937,
             weight_decay=0.0005,
             warmup_epochs=10.0,
-            patience=100,
+            patience=0,
             optimizer='AdamW',
             seed=42,
             deterministic=True,
-            workers=8,
+            workers=4,
             device=device_to_use
         )
-        
-        weights_path = f"runs/detect/{model_name}_{model_size}/weights/best.pt"
-        trained_model = YOLO(weights_path)
-        trained_model.export(format='onnx', simplify=True, opset=12)
         
         return results
     except Exception as e:
@@ -225,8 +221,8 @@ def train_yolo_model(yaml_file, class_list, model_name, model_size='n'):
         return None
 
 def main():
-    xml_dir = input("Enter XML annotations directory: ").strip()
-    img_dir = input("Enter images directory: ").strip()
+    img_dir = input("Enter images directory: ")
+    xml_dir = input("Enter XML annotations directory: ")
     
     if not os.path.exists(xml_dir) or not os.path.exists(img_dir):
         return
