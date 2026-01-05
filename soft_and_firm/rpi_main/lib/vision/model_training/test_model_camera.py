@@ -31,14 +31,19 @@ path_to_model = input("Enter path to model: ")
 cam = Camera(3)
 
 model = YOLO(path_to_model,task="detect",verbose=False)
-model.cpu()
 
 cv2.namedWindow("result",cv2.WINDOW_NORMAL)
 
 while cv2.waitKey(1)!=ord("q"):
     frame = cam.get_array()
-    result_frame = frame.copy()
-    results = model.track(frame, stream=True)
+    results = model.predict(
+        source=frame,
+        imgsz=736,
+        conf=0.4,
+        verbose=True,
+        stream=True
+    )
+
 
     for result in results:
         class_names = result.names
@@ -52,9 +57,9 @@ while cv2.waitKey(1)!=ord("q"):
 
             colour = (0,255,0)
 
-            cv2.rectangle(result_frame, (x1, y1), (x2, y2), colour, 2)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 2)
 
-            cv2.putText(result_frame, f"{class_name} {conf:.2f}",
+            cv2.putText(frame, f"{class_name} {conf:.2f}",
                         (x1, max(y1 - 10, 20)), cv2.FONT_HERSHEY_SIMPLEX,
                         0.6, colour, 2)
-    cv2.imshow("result",result_frame)
+    cv2.imshow("result",frame)
