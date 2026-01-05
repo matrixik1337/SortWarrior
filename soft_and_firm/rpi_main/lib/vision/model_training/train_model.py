@@ -4,6 +4,7 @@ import shutil
 import glob
 from sklearn.model_selection import train_test_split
 from ultralytics import YOLO
+import argparse
 
 def extract_classes_from_names(xml_dir):
     classes_dict = {}
@@ -177,24 +178,23 @@ names:
     
     return dataset_path, yaml_file
 
-def train_yolo_model(yaml_file, class_list, model_name, model_size='n'):
+def train_yolo_model(yaml_file, class_list, model_name, use_pretrained, model_size='n', device_to_use="cuda"):
     params = {
-        'n': {'imgsz': 320, 'epochs': 2000, 'batch': 8},
-        's': {'imgsz': 416, 'epochs': 2000, 'batch': 4},
-        'm': {'imgsz': 512, 'epochs': 2000, 'batch': 2},
-        'l': {'imgsz': 640, 'epochs': 2000, 'batch': 1},
+        'n': {'imgsz': 320, 'epochs': 5000, 'batch': 8},
+        's': {'imgsz': 416, 'epochs': 4000, 'batch': 4},
+        'm': {'imgsz': 512, 'epochs': 3000, 'batch': 2},
+        'l': {'imgsz': 640, 'epochs': 2500, 'batch': 1},
     }
     
     p = params[model_size]
-    
-    device_to_use = input("Enter name of device to use (NVIDIA GPU: \"cuda\"; CPU: \"cpu\"): ")
-    if input("Use pretrained model? (y/n): ") == "y":
-        use_pretrained = True
-    else :
-        use_pretrained = False
         
     try:
-        model = YOLO("yolo11n.pt")
+        if use_pretrained==True:
+            model = YOLO("yolo11n.pt")
+        else:
+            model = YOLO("yolo11n.yaml")
+
+
         results = model.train(
             data=yaml_file,
             imgsz=p['imgsz'],
@@ -202,36 +202,77 @@ def train_yolo_model(yaml_file, class_list, model_name, model_size='n'):
             batch=p['batch'],
             name=model_name,
             pretrained=use_pretrained,
+            
+            # АУГМЕНТАЦИИ
+            
+            hsv_h=0.0,        # Отключаем изменение оттенка (Hue) - модель не учит цвет
+            hsv_s=0.8,        # Сильные изменения насыщенности (0.0-1.0)
+            hsv_v=0.6,        # Сильные изменения яркости
+            
+            degrees=180.0,    # Полный диапазон поворотов (-180 до +180 градусов)
+            shear=30.0,       # Сильный наклон/сдвиг
+            
+            scale=0.9,        # Сильное масштабирование (0.9 = от 10% до 190% размера)
+
+            perspective=0.001,  # Перспективные искажения (0.0-0.001)
+            
+            fliplr=0.5,       # Горизонтальное отражение 50%
+            flipud=0.2,       # Вертикальное отражение 20%
+            
+            translate=0.2,    # Сдвиг до 20% от размера изображения
+            
+            mosaic=1.0,       # Всегда использовать мозаику
+            mixup=0.3,        # Mixup аугментация 30%
+            copy_paste=0.1,   # Копи-паст аугментация
+            
+            erasing=0.4,      # Random erasing для лучшей обобщающей способности
+            
+            
             lr0=0.01,
-            lrf=0.1,
+            lrf=0.01,
             momentum=0.937,
             weight_decay=0.0005,
-            warmup_epochs=10.0,
-            patience=0,
-            optimizer='AdamW',
+            warmup_epochs=20.0,
+            patience=500,
+            
+            label_smoothing=0.2,
+            dropout=0.2,
+            
             seed=42,
             deterministic=True,
             workers=4,
-            device=device_to_use
+            device=device_to_use,
+            
+            augment=True,        # Включить все аугментации
+            rect=False,
+            cache=True,
         )
-        
         return results
     except Exception as e:
         print(f"Error: {e}")
         return None
 
+arg = argparse.ArgumentParser()
+
+arg.add_argument("--annotations","-a",type=str,help="Path to XML annotations directory")
+arg.add_argument("--images","-i",type=str,help="Path to images directory")
+arg.add_argument("--name","-n",type=str,help="Name of your model")
+arg.add_argument("--size","-s",type=str,default="n",help="Size of your model (n/s/m/l)")
+arg.add_argument("--device","-d",type=str,default="cuda",help="Device to train on")
+arg.add_argument("--pretrained","-p",type=bool,default=False,help="Train pretrained model")
+
+
+args = arg.parse_args()
+
 def main():
-    img_dir = input("Enter images directory: ")
-    xml_dir = input("Enter XML annotations directory: ")
+    img_dir = args.images
+    xml_dir = args.annotations
     
     if not os.path.exists(xml_dir) or not os.path.exists(img_dir):
         return
     
-    model_name = input("Enter model name: ").strip()
-    model_size = input("Model size [n]: ").strip()
-    
-    if model_size not in ['n', 's', 'm', 'l']:
-        model_size = 'n'
+    model_name = args.name
+    model_size = args.size
     
     result = create_dataset_structure(img_dir, xml_dir, model_name)
     if result is None:
@@ -249,7 +290,7 @@ def main():
     
     confirm = input("Train? (y/n): ").strip().lower()
     if confirm == 'y':
-        train_yolo_model(yaml_file, class_list, model_name, model_size)
+        train_yolo_model(yaml_file, class_list, model_name, args.pretrained, model_size, args.device)
     
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)

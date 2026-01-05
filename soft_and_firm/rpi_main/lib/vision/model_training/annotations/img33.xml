@@ -12,7 +12,7 @@
 	</size>
 	<segmented>0</segmented>
 	<object>
-		<name>blue_base</name>
+		<name>base</name>
 		<pose>Unspecified</pose>
 		<truncated>1</truncated>
 		<difficult>0</difficult>
