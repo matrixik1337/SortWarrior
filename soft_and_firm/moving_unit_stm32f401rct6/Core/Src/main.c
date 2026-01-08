@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "stm32f4xx_hal_gpio.h"
+#include "stm32f4xx_hal_uart.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -45,6 +47,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+
+extern uint8_t uart_rx_buffer[2];
 
 /* USER CODE END PV */
 
@@ -92,6 +96,8 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  HAL_UART_Receive_IT(&huart1,uart_rx_buffer,2);
+
   // Initializing PWM
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
@@ -99,13 +105,21 @@ int main(void)
   HAL_GPIO_WritePin(ML2_GPIO_Port,ML2_Pin,GPIO_PIN_RESET);
   HAL_GPIO_WritePin(MR2_GPIO_Port,MR2_Pin,GPIO_PIN_RESET);
 
-  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    if(uart_rx_buffer[0]==48)
+    {
+      HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+    }
+    else if(uart_rx_buffer[0]==49)
+    {
+      HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -159,6 +173,16 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+// Setting up all UART interruptions, patamushta tak nada
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if(huart->Instance == USART1)
+  {
+    HAL_UART_Receive_IT(&huart1,uart_rx_buffer,1);
+  }
+}
 
 /* USER CODE END 4 */
 

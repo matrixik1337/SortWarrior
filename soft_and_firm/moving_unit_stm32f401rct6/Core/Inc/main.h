@@ -67,8 +67,18 @@ void Error_Handler(void);
 #define ML2_GPIO_Port GPIOA
 #define MR2_Pin GPIO_PIN_3
 #define MR2_GPIO_Port GPIOA
+#define MLENCA_Pin GPIO_PIN_4
+#define MLENCA_GPIO_Port GPIOA
+#define MLENCB_Pin GPIO_PIN_5
+#define MLENCB_GPIO_Port GPIOA
+#define MRENCA_Pin GPIO_PIN_6
+#define MRENCA_GPIO_Port GPIOA
+#define MRENCB_Pin GPIO_PIN_7
+#define MRENCB_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
+
+static uint8_t uart_rx_buffer[2];
 
 /* USER CODE END Private defines */
 
