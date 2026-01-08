@@ -2,12 +2,11 @@
 
 import cv2
 import numpy as np
-from ultralytics import YOLO
-
 
 # ALL COLORS is 0
 # RED color is 1
 # BLUE color is 2
+# GREEN color is 3
 
 red_lower = np.array([0,50,50])
 red_upper = np.array([20,255,255])
@@ -19,7 +18,7 @@ blue_ui_color = (255,127,127)
 
 class ImgProcess:
     def __init__(self):
-      self.model = YOLO("model.pt")
+      """nothing (but only for now i guess)"""
 
     def get_pucks_count(self,frame,color,startX,startY,endX,endY): # Gettings count of pucks on frame in predefined area
       result_frame = frame.copy()
@@ -108,8 +107,7 @@ class ImgProcess:
     def track_nearest_puck(self,frame,color,startX,startY,endX,endY): # Getting coordinates of nearest puck in predefined area
       result_frame = frame.copy()
       cv2.rectangle(result_frame,(int(startX),int(startY)),(int(endX), int(endY)), (50,50,255),4)
-
-
+      
       x=0
       y=0
       width = 0
@@ -208,23 +206,5 @@ class ImgProcess:
       cv2.drawMarker(result_frame,(int(x+(width/2)),int(y+(height/2))),(255,255,255),cv2.MARKER_TILTED_CROSS,10,5)
 
       return x+(width/2), y+(height/2), result_frame
-    
-    def yolo_test(self,frame):
-      result_frame = frame.copy()
-      detections = self.model.track(frame)
-      for result in detections:
-        class_names = result.names
-        for box in result.boxes:
-            if box.conf[0] > 0.4:
-                x1, y1, x2, y2 = map(int, box.xyxy[0])
-                cls = int(box.cls[0])
-                class_name = class_names[cls]
-                conf = float(box.conf[0])
-                colour = (0,255,0)
-                cv2.rectangle(result_frame, (x1, y1), (x2, y2), colour, 2)
-
-                cv2.putText(result_frame, f"{class_name} {conf:.2f}",
-                            (x1, max(y1 - 10, 20)), cv2.FONT_HERSHEY_SIMPLEX,
-                            0.6, colour, 2)
                 
       return frame
