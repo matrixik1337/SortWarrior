@@ -18,15 +18,13 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_uart.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdlib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,7 +46,11 @@
 
 /* USER CODE BEGIN PV */
 
-extern uint8_t uart_rx_buffer[2];
+extern uint8_t uart_rx_buffer[2] = {100,100}; // Buffer for UART
+
+// Variables for motor speed
+int8_t l_spd = 0;
+int8_t r_spd = 0;
 
 /* USER CODE END PV */
 
@@ -96,30 +98,68 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_UART_Receive_IT(&huart1,uart_rx_buffer,2);
-
   // Initializing PWM
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
+  // Reseting motor pins
+  HAL_GPIO_WritePin(ML1_GPIO_Port,ML1_Pin,GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(MR1_GPIO_Port,MR1_Pin,GPIO_PIN_RESET);
   HAL_GPIO_WritePin(ML2_GPIO_Port,ML2_Pin,GPIO_PIN_RESET);
   HAL_GPIO_WritePin(MR2_GPIO_Port,MR2_Pin,GPIO_PIN_RESET);
 
+  // Of course LED for debuging (Nah, just for beauty)
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+
+  // Start recieving data from UART
+  HAL_UART_Receive_IT(&huart1,uart_rx_buffer,2);
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    if(uart_rx_buffer[0]==48)
+    l_spd = uart_rx_buffer[0]-100;
+    r_spd = uart_rx_buffer[1]-100;
+
+    if(l_spd>0)
     {
-      HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+      TIM2 -> CCR1 = l_spd*65535/100;
+      HAL_GPIO_WritePin(ML1_GPIO_Port, ML1_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(ML2_GPIO_Port, ML2_Pin, GPIO_PIN_SET);
     }
-    else if(uart_rx_buffer[0]==49)
+    else if(l_spd<0)
     {
-      HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+      TIM2 -> CCR1 = abs(l_spd)*65535/100;
+      HAL_GPIO_WritePin(ML1_GPIO_Port, ML1_Pin, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(ML2_GPIO_Port, ML2_Pin, GPIO_PIN_RESET);
     }
+    else 
+    {
+      HAL_GPIO_WritePin(ML1_GPIO_Port, ML1_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(ML2_GPIO_Port, ML2_Pin, GPIO_PIN_RESET);
+    }
+
+    if(r_spd>0)
+    {
+      TIM2 -> CCR2 = r_spd*65535/100;
+      HAL_GPIO_WritePin(MR1_GPIO_Port, MR1_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(MR2_GPIO_Port, MR2_Pin, GPIO_PIN_SET);
+    }
+    else if(r_spd<0)
+    {
+      TIM2 -> CCR2 = abs(r_spd)*65535/100;
+      HAL_GPIO_WritePin(MR1_GPIO_Port, MR1_Pin, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(MR2_GPIO_Port, MR2_Pin, GPIO_PIN_RESET);
+    }
+    else 
+    {
+      HAL_GPIO_WritePin(MR1_GPIO_Port, MR1_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(MR2_GPIO_Port, MR2_Pin, GPIO_PIN_RESET);
+    }
+    
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -180,7 +220,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if(huart->Instance == USART1)
   {
-    HAL_UART_Receive_IT(&huart1,uart_rx_buffer,1);
+    HAL_UART_Receive_IT(&huart1,uart_rx_buffer,2);
   }
 }
 
